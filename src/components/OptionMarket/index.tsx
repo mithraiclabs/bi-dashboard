@@ -4,33 +4,11 @@ import { getAllOptionAccounts, PsyAmericanIdl } from "@mithraic-labs/psy-america
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
-import { Table } from "antd";
 import { getMultipleAccountInfo, getMultipleMintInfo } from "../../utils/accounts";
 import { getPriceWithTokenAddress } from "../../utils/price";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
-
-const columns = [
-  {
-    title: "Underlying Asset Pool",
-    key: "underlying_asset_pool",
-    dataIndex: "underlying_asset_pool",
-  },
-  {
-    title: "Underlying Asset Mint",
-    key: "underlying_asset_mint",
-    dataIndex: "underlying_asset_mint",
-  },
-  {
-    title: "Quote Asset Pool",
-    key: "quote_asset_pool",
-    dataIndex: "quote_asset_pool",
-  },
-  {
-    title: "Quote Asset Mint",
-    key: "quote_asset_mint",
-    dataIndex: "quote_asset_mint",
-  },
-]
+import { MintInfo } from "@solana/spl-token";
+import { TokenAccount } from "../../models/account";
 
 interface poolByMint {
   [id: string]: PublicKey[]
@@ -49,7 +27,16 @@ export const OptionMarket = () => {
     quote_asset_mint: string;
   }[]>([]);
 
-  const [assetPoolsOption, setAssetPoolsOption] = useState({});
+  const [underlyingPoolsOption, setUnderlyingPoolsOption] = useState({});
+  const [quotePoolsOption, setQuotePoolsOption] = useState({});
+
+  const [underlyingPoolList, setUnderlyingPoolList] = useState<poolByMint>({});
+  const [quotePoolList, setQuotePoolList] = useState<poolByMint>({});
+
+  const [priceOfMint, setPriceOfMint] = useState<{mint:string,price:number}[]>([]);
+  const [mintList, setMintList] = useState<({key: string, data: MintInfo}| null)[]>([]);
+  const [accountList, setAccountList] = useState<TokenAccount[]>([]);
+
 
   async function getOptions() {
     // Load all the PsyOptions option markets
@@ -57,104 +44,166 @@ export const OptionMarket = () => {
     const program = new Program(PsyAmericanIdl, new PublicKey('R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs'), anchorProvider);
     const optionMarkets = await getAllOptionAccounts(program);
 
-    let assetPoolList: poolByMint = {};
+    let underlyingPoolList: poolByMint = {};
     let quotePoolList: poolByMint = {};
 
+    const keys: string[] = [];
+    const poolList: PublicKey[] = [];
+
+
     optionMarkets.forEach(market => {
-      if (assetPoolList[market.underlyingAssetMint.toBase58()]) {
-        assetPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
-      } else {
-        assetPoolList[market.underlyingAssetMint.toBase58()] = [market.underlyingAssetPool];
+      if (!underlyingPoolList[market.underlyingAssetMint.toBase58()]) {
+        underlyingPoolList[market.underlyingAssetMint.toBase58()] = [];
+      }
+      if (!underlyingPoolList[market.quoteAssetMint.toBase58()]) {
+        underlyingPoolList[market.quoteAssetMint.toBase58()] = [];
+      }
+      if (!quotePoolList[market.underlyingAssetMint.toBase58()]) {
+        quotePoolList[market.underlyingAssetMint.toBase58()] = [];
+      }
+      if (!quotePoolList[market.quoteAssetMint.toBase58()]) {
+        quotePoolList[market.quoteAssetMint.toBase58()] = [];
+      }
+
+      if (underlyingPoolList[market.underlyingAssetMint.toBase58()]) {
+        underlyingPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
+        poolList.push(market.underlyingAssetPool);
       }
 
       if (quotePoolList[market.quoteAssetMint.toBase58()]) {
         quotePoolList[market.quoteAssetMint.toBase58()].push(market.quoteAssetPool);
-      } else {
-        quotePoolList[market.quoteAssetMint.toBase58()] = [market.quoteAssetPool];
+        poolList.push(market.quoteAssetPool);
       }
+
+      if (keys.indexOf(market.underlyingAssetMint.toBase58()) < 0)
+        keys.push(market.underlyingAssetMint.toBase58());
+      if (keys.indexOf(market.quoteAssetMint.toBase58()) < 0)
+        keys.push(market.underlyingAssetMint.toBase58());
     });
 
-    
-    // setAssetPoolList(assetPoolList);
-    // setQuotePoolList(quotePoolList);
-
-    let marketList = optionMarkets.map(market => {
-      return {
-        "underlying_asset_pool": market.underlyingAssetPool.toBase58(),
-        "underlying_asset_mint": market.underlyingAssetMint.toBase58(),
-        "quote_asset_pool": market.quoteAssetPool.toBase58(),
-        "quote_asset_mint": market.quoteAssetMint.toBase58(),
-      }
-    })
-
     setMarketList(marketList);
-
-    const keys = Object.keys(assetPoolList);
-    const assetAmounts : amountByMint = {};
+    setUnderlyingPoolList(underlyingPoolList);
+    setQuotePoolList(quotePoolList);
 
     const priceOfMint = await getPriceWithTokenAddress(keys);
-    console.log(priceOfMint);
+    setPriceOfMint(priceOfMint);
 
     const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
-    console.log(mints);
+    setMintList(mints);
+
+    const accountList = await getMultipleAccountInfo(connection, poolList);
+    setAccountList(accountList);
+
+    drawUnderlyingPool();
+    drawQuotePool();
+  }
+
+  async function drawUnderlyingPool() {
+    const keys = Object.keys(underlyingPoolList);
+    const underlyingAssetAmounts : amountByMint = {};
+
+    // const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
 
     for await (const key of keys) {
-      assetAmounts[key] = 0;
-      const accList = await getMultipleAccountInfo(connection, assetPoolList[key]);
-      accList.forEach(accInfo => {
-        const mint = mints[keys.indexOf(key)];
-        const pMint = priceOfMint.find((mint: { mint: string; }) => mint.mint === key);
-        const price = pMint.price;
-        if (mint) {
-          let decimal = mint.decimals;
-          let amount = accInfo.info.amount.toNumber();
-          while (decimal > 0) {
-            amount /= 10;
-            decimal--;
-          }
+      underlyingAssetAmounts[key] = 0;
+      accountList.forEach(accInfo => {
+        if (underlyingPoolList[key].indexOf(accInfo.pubkey) >= 0) {
+          const mint = mintList.find((mint) => mint && mint.key === key);
+          const pMint = priceOfMint.find((mint: { mint: string; }) => mint.mint === key);
+          const price = pMint ? pMint.price : 0;
+          if (mint) {
+            let decimal = mint.data.decimals;
+            let amount = accInfo.info.amount.toNumber();
+            while (decimal > 0) {
+              amount /= 10;
+              decimal--;
+            }
 
-          assetAmounts[key] += amount * price;
+            underlyingAssetAmounts[key] += amount * price;
+          }
         }
       });
-      console.log(accList);
     };
     
-    console.log(assetAmounts);
+    let dataPoints: { label: string; y: number; }[] = [];
+
+    keys.forEach(key => {
+      dataPoints.push( {label: key, y: underlyingAssetAmounts[key]});
+    })
+
+    setUnderlyingPoolsOption({
+      title: {
+        text: "TVL of Underlying Asset Pools"
+      },
+      data: [
+      {
+        type: "column",
+        indexLabel: "{y}",
+        dataPoints: dataPoints
+      }
+      ]
+    });
+  }
+
+  async function drawQuotePool() {
+    const keys = Object.keys(quotePoolList);
+    const quoteAssetAmounts : amountByMint = {};
+
+    for await (const key of keys) {
+      quoteAssetAmounts[key] = 0;
+      accountList.forEach(accInfo => {
+        if (quotePoolList[key].indexOf(accInfo.pubkey) >= 0) {
+          const mint = mintList.find((mint) => mint && mint.key === key);
+          const pMint = priceOfMint.find((mint: { mint: string; }) => mint.mint === key);
+          const price = pMint ? pMint.price : 0;
+          if (mint) {
+            let decimal = mint.data.decimals;
+            let amount = accInfo.info.amount.toNumber();
+            while (decimal > 0) {
+              amount /= 10;
+              decimal--;
+            }
+
+            quoteAssetAmounts[key] += amount * price;
+          }
+        }
+      });
+    };
+    
 
     let dataPoints: { label: string; y: number; }[] = [];
 
     keys.forEach(key => {
-      dataPoints.push( {label: key, y: assetAmounts[key]});
-    })
+      dataPoints.push( {label: key, y: quoteAssetAmounts[key]});
+    });
 
-    let assetPoolsOption = {
+    setQuotePoolsOption({
       title: {
-        text: "TVL of Asset Pools"
+        text: "TVL of Quote Asset Pools"
       },
       data: [
       {
-        // Change type to "doughnut", "line", "splineArea", etc.
         type: "column",
+        indexLabel: "{y}",
         dataPoints: dataPoints
       }
       ]
-    }
-
-    setAssetPoolsOption(assetPoolsOption);
+    });
   }
 
   useEffect(() => {
     getOptions();
   }, []);
 
-  
-
   return (
     <>
       <div>
-        <Table columns={columns} dataSource={marketList} loading={false} />
-
-        <CanvasJSChart options = {assetPoolsOption} />
+        <div>
+        <CanvasJSChart options = {underlyingPoolsOption} />
+        </div>
+        <div>
+        <CanvasJSChart options = {quotePoolsOption} />
+        </div>
       </div>
     </>
   );

@@ -24,30 +24,42 @@ export const getAccountInfo = async (connection: Connection, pubKey: PublicKey) 
 };
 
 export const getMultipleAccountInfo = async (connection: Connection, pubKeys: PublicKey[]) => {
-  const info = await connection.getMultipleAccountsInfo(pubKeys);
-  if (info === null) {
-    throw new Error("Failed to find mint account");
-  }
-
   let array: TokenAccount[] = [];
+  var pubList = pubKeys.reduce((resultArray: PublicKey[][], item, index) => { 
+    const chunkIndex = Math.floor(index/100)
   
-  info.forEach(buf => {
-    if (buf != null) {
-      const buffer = Buffer.from(buf.data);
-
-      const data = deserializeAccount(buffer);
-    
-      const details = {
-        pubkey: pubKeys[info.indexOf(buf)],
-        account: {
-          ...buf,
-        },
-        info: data,
-      } as TokenAccount;
-
-      array.push(details);
+    if(!resultArray[chunkIndex]) {
+      resultArray[chunkIndex] = [] // start a new chunk
     }
-  });
+  
+    resultArray[chunkIndex].push(item)
+  
+    return resultArray
+  }, [])
+
+  for await (const subPubList of pubList) {
+    const info = await connection.getMultipleAccountsInfo(subPubList);
+    if (info === null) {
+      throw new Error("Failed to find mint account");
+    }
+    
+    info.forEach(buf => {
+      if (buf != null) {
+        const buffer = Buffer.from(buf.data);
+        const data = deserializeAccount(buffer);
+      
+        const details = {
+          pubkey: subPubList[info.indexOf(buf)],
+          account: {
+            ...buf,
+          },
+          info: data,
+        } as TokenAccount;
+
+        array.push(details);
+      }
+    });
+  }
 
   return array;
 };
@@ -109,7 +121,10 @@ export const getMultipleMintInfo = async (connection: Connection, pubKeys: Publi
   return info.map(v => {
     if (v != null) {
       const data = Buffer.from(v.data);
-      return deserializeMint(data);  
+      return {
+        key: pubKeys[info.indexOf(v)].toBase58(),
+        data: deserializeMint(data)
+      };
     } 
     return null;
   })
