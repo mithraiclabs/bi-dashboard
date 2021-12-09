@@ -7,6 +7,7 @@ import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 import { getMultipleAccountInfo, getMultipleMintInfo } from "../../utils/accounts";
 import { getPriceWithTokenAddress } from "../../utils/price";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
+import { TOKENSBASE } from "../../models/token";
 
 interface poolByMint {
   [id: string]: PublicKey[]
@@ -106,7 +107,14 @@ export const OptionMarket = () => {
     let dataPoints: { label: string; y: number; }[] = [];
 
     keys.forEach(key => {
-      dataPoints.push( {label: key, y: underlyingAssetAmounts[key]});
+      const tokenKeys = Object.keys(TOKENSBASE);
+      let symbol = '';
+      tokenKeys.forEach(tkey => {
+        if (TOKENSBASE[tkey].mintAddress === key)
+          symbol = TOKENSBASE[tkey].symbol;
+      });
+
+      dataPoints.push( {label: symbol, y: underlyingAssetAmounts[key]});
     })
 
     setUnderlyingPoolsOption({
@@ -115,7 +123,9 @@ export const OptionMarket = () => {
       },
       data: [
       {
-        type: "column",
+        type: "pie",
+        showInLegend: "true",
+				legendText: "{label}",
         indexLabel: "{y}",
         dataPoints: dataPoints
       }
@@ -152,7 +162,14 @@ export const OptionMarket = () => {
     let dataPoints: { label: string; y: number; }[] = [];
 
     keys.forEach(key => {
-      dataPoints.push( {label: key, y: quoteAssetAmounts[key]});
+      const tokenKeys = Object.keys(TOKENSBASE);
+      let symbol = '';
+      tokenKeys.forEach(tkey => {
+        if (TOKENSBASE[tkey].mintAddress === key)
+          symbol = TOKENSBASE[tkey].symbol;
+      });
+
+      dataPoints.push( {label: symbol, y: quoteAssetAmounts[key]});
     });
 
     setQuotePoolsOption({
@@ -161,7 +178,9 @@ export const OptionMarket = () => {
       },
       data: [
       {
-        type: "column",
+        type: "pie",
+        showInLegend: "true",
+				legendText: "{label}",
         indexLabel: "{y}",
         dataPoints: dataPoints
       }
