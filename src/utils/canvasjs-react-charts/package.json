@@ -1,0 +1,16 @@
+{
+  "name": "canvasjs-react-charts",
+  "version": "1.0.5",
+  "description": "A package for React CanvasJS Charts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "canvasjs",
+    "react",
+    "chart"
+  ],
+  "author": "CanvasJS",
+  "license": "ISC"
+}
