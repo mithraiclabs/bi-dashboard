@@ -7,8 +7,6 @@ import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 import { getMultipleAccountInfo, getMultipleMintInfo } from "../../utils/accounts";
 import { getPriceWithTokenAddress } from "../../utils/price";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
-import { MintInfo } from "@solana/spl-token";
-import { TokenAccount } from "../../models/account";
 
 interface poolByMint {
   [id: string]: PublicKey[]
@@ -20,23 +18,9 @@ interface amountByMint {
 
 export const OptionMarket = () => {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
-  const [marketList, setMarketList] = useState<{
-    underlying_asset_pool: string;
-    underlying_asset_mint: string;
-    quote_asset_pool: string;
-    quote_asset_mint: string;
-  }[]>([]);
 
   const [underlyingPoolsOption, setUnderlyingPoolsOption] = useState({});
   const [quotePoolsOption, setQuotePoolsOption] = useState({});
-
-  const [underlyingPoolList, setUnderlyingPoolList] = useState<poolByMint>({});
-  const [quotePoolList, setQuotePoolList] = useState<poolByMint>({});
-
-  const [priceOfMint, setPriceOfMint] = useState<{mint:string,price:number}[]>([]);
-  const [mintList, setMintList] = useState<({key: string, data: MintInfo}| null)[]>([]);
-  const [accountList, setAccountList] = useState<TokenAccount[]>([]);
-
 
   async function getOptions() {
     // Load all the PsyOptions option markets
@@ -81,28 +65,22 @@ export const OptionMarket = () => {
         keys.push(market.underlyingAssetMint.toBase58());
     });
 
-    setMarketList(marketList);
-    setUnderlyingPoolList(underlyingPoolList);
-    setQuotePoolList(quotePoolList);
+
+    console.log(optionMarkets);
 
     const priceOfMint = await getPriceWithTokenAddress(keys);
-    setPriceOfMint(priceOfMint);
 
     const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
-    setMintList(mints);
 
     const accountList = await getMultipleAccountInfo(connection, poolList);
-    setAccountList(accountList);
 
-    drawUnderlyingPool();
-    drawQuotePool();
+    drawUnderlyingPool(accountList, underlyingPoolList, priceOfMint, mints);
+    drawQuotePool(accountList, quotePoolList, priceOfMint, mints);
   }
 
-  async function drawUnderlyingPool() {
+  async function drawUnderlyingPool(accountList: any[], underlyingPoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
     const keys = Object.keys(underlyingPoolList);
     const underlyingAssetAmounts : amountByMint = {};
-
-    // const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
 
     for await (const key of keys) {
       underlyingAssetAmounts[key] = 0;
@@ -145,7 +123,7 @@ export const OptionMarket = () => {
     });
   }
 
-  async function drawQuotePool() {
+  async function drawQuotePool(accountList: any[], quotePoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
     const keys = Object.keys(quotePoolList);
     const quoteAssetAmounts : amountByMint = {};
 
