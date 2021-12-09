@@ -26,3 +26,17 @@ V1 is under active development. You can find the project and relevant tasks
 #### If you wish to tackle a task
 1. Assign it to yourself, so it is clear someone is working on it
 2. 
+
+
+### How to Install
+```bash
+yarn install
+```
+
+### How to start
+```bash
+yarn start
+```
+
+#### URL
+http://localhost:3000

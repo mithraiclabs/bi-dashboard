@@ -23,40 +23,42 @@ export const OptionMarket = () => {
   const [underlyingPoolsOption, setUnderlyingPoolsOption] = useState({});
   const [quotePoolsOption, setQuotePoolsOption] = useState({});
 
+  const [underlyingTotal, setUnderlyingTotal] = useState(0);
+
   async function getOptions() {
     // Load all the PsyOptions option markets
     const anchorProvider = new Provider(connection, new NodeWallet(new Keypair()), {});
     const program = new Program(PsyAmericanIdl, new PublicKey('R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs'), anchorProvider);
     const optionMarkets = await getAllOptionAccounts(program);
 
-    let underlyingPoolList: poolByMint = {};
-    let quotePoolList: poolByMint = {};
+    let assetPoolList: poolByMint = {};
+    // let quotePoolList: poolByMint = {};
 
     const keys: string[] = [];
     const poolList: PublicKey[] = [];
 
 
     optionMarkets.forEach(market => {
-      if (!underlyingPoolList[market.underlyingAssetMint.toBase58()]) {
-        underlyingPoolList[market.underlyingAssetMint.toBase58()] = [];
+      if (!assetPoolList[market.underlyingAssetMint.toBase58()]) {
+        assetPoolList[market.underlyingAssetMint.toBase58()] = [];
       }
-      if (!underlyingPoolList[market.quoteAssetMint.toBase58()]) {
-        underlyingPoolList[market.quoteAssetMint.toBase58()] = [];
+      if (!assetPoolList[market.quoteAssetMint.toBase58()]) {
+        assetPoolList[market.quoteAssetMint.toBase58()] = [];
       }
-      if (!quotePoolList[market.underlyingAssetMint.toBase58()]) {
-        quotePoolList[market.underlyingAssetMint.toBase58()] = [];
-      }
-      if (!quotePoolList[market.quoteAssetMint.toBase58()]) {
-        quotePoolList[market.quoteAssetMint.toBase58()] = [];
-      }
+      // if (!quotePoolList[market.underlyingAssetMint.toBase58()]) {
+      //   quotePoolList[market.underlyingAssetMint.toBase58()] = [];
+      // }
+      // if (!quotePoolList[market.quoteAssetMint.toBase58()]) {
+      //   quotePoolList[market.quoteAssetMint.toBase58()] = [];
+      // }
 
-      if (underlyingPoolList[market.underlyingAssetMint.toBase58()]) {
-        underlyingPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
+      if (assetPoolList[market.underlyingAssetMint.toBase58()]) {
+        assetPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
         poolList.push(market.underlyingAssetPool);
       }
 
-      if (quotePoolList[market.quoteAssetMint.toBase58()]) {
-        quotePoolList[market.quoteAssetMint.toBase58()].push(market.quoteAssetPool);
+      if (assetPoolList[market.quoteAssetMint.toBase58()]) {
+        assetPoolList[market.quoteAssetMint.toBase58()].push(market.quoteAssetPool);
         poolList.push(market.quoteAssetPool);
       }
 
@@ -75,18 +77,18 @@ export const OptionMarket = () => {
 
     const accountList = await getMultipleAccountInfo(connection, poolList);
 
-    drawUnderlyingPool(accountList, underlyingPoolList, priceOfMint, mints);
-    drawQuotePool(accountList, quotePoolList, priceOfMint, mints);
+    drawUnderlyingPool(accountList, assetPoolList, priceOfMint, mints);
+    // drawQuotePool(accountList, quotePoolList, priceOfMint, mints);
   }
 
-  async function drawUnderlyingPool(accountList: any[], underlyingPoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
-    const keys = Object.keys(underlyingPoolList);
-    const underlyingAssetAmounts : amountByMint = {};
+  async function drawUnderlyingPool(accountList: any[], assetPoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
+    const keys = Object.keys(assetPoolList);
+    const assetAmounts : amountByMint = {};
 
     for await (const key of keys) {
-      underlyingAssetAmounts[key] = 0;
+      assetAmounts[key] = 0;
       accountList.forEach(accInfo => {
-        if (underlyingPoolList[key].indexOf(accInfo.pubkey) >= 0) {
+        if (assetPoolList[key].indexOf(accInfo.pubkey) >= 0) {
           const mint = mintList.find((mint) => mint && mint.key === key);
           const pMint = priceOfMint.find((mint: { mint: string; }) => mint.mint === key);
           const price = pMint ? pMint.price : 0;
@@ -98,7 +100,7 @@ export const OptionMarket = () => {
               decimal--;
             }
 
-            underlyingAssetAmounts[key] += amount * price;
+            assetAmounts[key] += amount * price;
           }
         }
       });
@@ -106,6 +108,7 @@ export const OptionMarket = () => {
     
     let dataPoints: { label: string; y: number; }[] = [];
 
+    let total = 0;
     keys.forEach(key => {
       const tokenKeys = Object.keys(TOKENSBASE);
       let symbol = '';
@@ -114,19 +117,27 @@ export const OptionMarket = () => {
           symbol = TOKENSBASE[tkey].symbol;
       });
 
-      dataPoints.push( {label: symbol, y: underlyingAssetAmounts[key]});
+      dataPoints.push( {label: symbol, y: Math.round(assetAmounts[key])});
+      total += assetAmounts[key];
     })
 
     setUnderlyingPoolsOption({
       title: {
-        text: "TVL of Underlying Asset Pools"
+        text: "TVL of Asset Pools"
       },
+      subtitles: [{
+				text: "Total: $" + Math.round(total).toLocaleString(),
+				verticalAlign: "center",
+				fontSize: 16,
+				dockInsidePlotArea: true
+			}],
       data: [
       {
-        type: "pie",
+        type: "doughnut",
         showInLegend: "true",
+				toolTipContent: "{label}: <strong>'$'{y}</strong>",
 				legendText: "{label}",
-        indexLabel: "{y}",
+        indexLabel: "'$'{y}",
         dataPoints: dataPoints
       }
       ]
@@ -161,6 +172,7 @@ export const OptionMarket = () => {
 
     let dataPoints: { label: string; y: number; }[] = [];
 
+    let total = 0;
     keys.forEach(key => {
       const tokenKeys = Object.keys(TOKENSBASE);
       let symbol = '';
@@ -170,18 +182,26 @@ export const OptionMarket = () => {
       });
 
       dataPoints.push( {label: symbol, y: quoteAssetAmounts[key]});
+      total += quoteAssetAmounts[key];
     });
 
     setQuotePoolsOption({
       title: {
         text: "TVL of Quote Asset Pools"
       },
+      subtitles: [{
+				text: "Total: $" + total.toFixed(2),
+				verticalAlign: "center",
+				fontSize: 16,
+				dockInsidePlotArea: true
+			}],
       data: [
       {
-        type: "pie",
+        type: "doughnut",
         showInLegend: "true",
 				legendText: "{label}",
-        indexLabel: "{y}",
+				toolTipContent: "{label}: <strong>'$'{y}</strong>",
+        indexLabel: "'$'{y}",
         dataPoints: dataPoints
       }
       ]
