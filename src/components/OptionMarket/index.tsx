@@ -7,7 +7,10 @@ import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 import { getMultipleAccountInfo, getMultipleMintInfo } from "../../utils/accounts";
 import { getPriceWithTokenAddress } from "../../utils/price";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
+import { getAmountWithDecimal } from '../../utils/math';
 import { TOKENSBASE } from "../../models/token";
+import { request, gql } from 'graphql-request'
+
 
 interface poolByMint {
   [id: string]: PublicKey[]
@@ -20,7 +23,9 @@ interface amountByMint {
 export const OptionMarket = () => {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
 
-  const [assetPoolsOption, setUnderlyingPoolsOption] = useState({});
+  const [tvlAssetPoolsOption, setTVLAssetPoolsOption] = useState({});
+  const [tvl24HAssetPoolsOption, setTVL24HAssetPoolsOption] = useState({});
+
 
   async function getOptions() {
     // Load all the PsyOptions option markets
@@ -29,7 +34,6 @@ export const OptionMarket = () => {
     const optionMarkets = await getAllOptionAccounts(program);
 
     let assetPoolList: poolByMint = {};
-    // let quotePoolList: poolByMint = {};
 
     const keys: string[] = [];
     const poolList: PublicKey[] = [];
@@ -68,8 +72,8 @@ export const OptionMarket = () => {
 
     const accountList = await getMultipleAccountInfo(connection, poolList);
 
+    get24HRTotalVolume(assetPoolList);
     drawUnderlyingPool(accountList, assetPoolList, priceOfMint, mints);
-    // drawQuotePool(accountList, quotePoolList, priceOfMint, mints);
   }
 
   async function drawUnderlyingPool(accountList: any[], assetPoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
@@ -86,12 +90,7 @@ export const OptionMarket = () => {
           if (mint) {
             let decimal = mint.data.decimals;
             let amount = accInfo.info.amount.toNumber();
-            while (decimal > 0) {
-              amount /= 10;
-              decimal--;
-            }
-
-            assetAmounts[key] += amount * price;
+            assetAmounts[key] += getAmountWithDecimal(amount, decimal) * price;
           }
         }
       });
@@ -112,9 +111,68 @@ export const OptionMarket = () => {
       total += assetAmounts[key];
     })
 
-    setUnderlyingPoolsOption({
+    setTVLAssetPoolsOption({
       title: {
         text: "TVL of Asset Pools"
+      },
+      subtitles: [{
+				text: "Total: $" + Math.round(total).toLocaleString(),
+				verticalAlign: "center",
+				fontSize: 16,
+				dockInsidePlotArea: true
+			}],
+      data: [
+      {
+        type: "doughnut",
+        showInLegend: "true",
+				toolTipContent: "{label}: <strong>'$'{y}</strong>",
+				legendText: "{label}",
+        indexLabel: "'$'{y}",
+        dataPoints: dataPoints
+      }
+      ]
+    });
+  }
+
+  async function get24HRTotalVolume(assetPoolList: poolByMint) {
+    const keys = Object.keys(assetPoolList);
+    const poolList = keys.map(key => '"' + key + '"');
+    
+    const query = gql`
+      {
+        tokensStats(addresses: [
+         ${poolList}
+       ]) {
+         info {
+           address
+           symbol
+           decimals
+         }
+         priceUsd
+         vol24hUsd
+         vol7dUsd
+         tvlUsd
+         supply
+         marketCapUsd
+       }
+       }
+    `
+    const data = await request('https://api.serum.markets/', query);
+    console.log(data);
+
+    let total = 0;
+    let dataPoints: { label: string; y: number; }[] = [];
+
+    data.tokensStats.forEach((token: { info: { decimals: any; symbol: any; }; vol24hUsd: any; }) => {
+      const decimal = token.info.decimals;
+      const amount = getAmountWithDecimal(Number(token.vol24hUsd), decimal);
+      dataPoints.push( {label: token.info.symbol, y: Math.round(amount)});
+      total += amount;
+    })
+
+    setTVL24HAssetPoolsOption({
+      title: {
+        text: "24H Total Volume"
       },
       subtitles: [{
 				text: "Total: $" + Math.round(total).toLocaleString(),
@@ -143,7 +201,11 @@ export const OptionMarket = () => {
     <>
       <div>
         <div>
-        <CanvasJSChart options = {assetPoolsOption} />
+          <CanvasJSChart options = {tvlAssetPoolsOption} />
+        </div>
+
+        <div>
+          <CanvasJSChart options = {tvl24HAssetPoolsOption} />
         </div>
       </div>
     </>
