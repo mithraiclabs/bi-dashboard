@@ -20,10 +20,7 @@ interface amountByMint {
 export const OptionMarket = () => {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
 
-  const [underlyingPoolsOption, setUnderlyingPoolsOption] = useState({});
-  const [quotePoolsOption, setQuotePoolsOption] = useState({});
-
-  const [underlyingTotal, setUnderlyingTotal] = useState(0);
+  const [assetPoolsOption, setUnderlyingPoolsOption] = useState({});
 
   async function getOptions() {
     // Load all the PsyOptions option markets
@@ -45,12 +42,6 @@ export const OptionMarket = () => {
       if (!assetPoolList[market.quoteAssetMint.toBase58()]) {
         assetPoolList[market.quoteAssetMint.toBase58()] = [];
       }
-      // if (!quotePoolList[market.underlyingAssetMint.toBase58()]) {
-      //   quotePoolList[market.underlyingAssetMint.toBase58()] = [];
-      // }
-      // if (!quotePoolList[market.quoteAssetMint.toBase58()]) {
-      //   quotePoolList[market.quoteAssetMint.toBase58()] = [];
-      // }
 
       if (assetPoolList[market.underlyingAssetMint.toBase58()]) {
         assetPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
@@ -144,70 +135,6 @@ export const OptionMarket = () => {
     });
   }
 
-  async function drawQuotePool(accountList: any[], quotePoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
-    const keys = Object.keys(quotePoolList);
-    const quoteAssetAmounts : amountByMint = {};
-
-    for await (const key of keys) {
-      quoteAssetAmounts[key] = 0;
-      accountList.forEach(accInfo => {
-        if (quotePoolList[key].indexOf(accInfo.pubkey) >= 0) {
-          const mint = mintList.find((mint) => mint && mint.key === key);
-          const pMint = priceOfMint.find((mint: { mint: string; }) => mint.mint === key);
-          const price = pMint ? pMint.price : 0;
-          if (mint) {
-            let decimal = mint.data.decimals;
-            let amount = accInfo.info.amount.toNumber();
-            while (decimal > 0) {
-              amount /= 10;
-              decimal--;
-            }
-
-            quoteAssetAmounts[key] += amount * price;
-          }
-        }
-      });
-    };
-    
-
-    let dataPoints: { label: string; y: number; }[] = [];
-
-    let total = 0;
-    keys.forEach(key => {
-      const tokenKeys = Object.keys(TOKENSBASE);
-      let symbol = '';
-      tokenKeys.forEach(tkey => {
-        if (TOKENSBASE[tkey].mintAddress === key)
-          symbol = TOKENSBASE[tkey].symbol;
-      });
-
-      dataPoints.push( {label: symbol, y: quoteAssetAmounts[key]});
-      total += quoteAssetAmounts[key];
-    });
-
-    setQuotePoolsOption({
-      title: {
-        text: "TVL of Quote Asset Pools"
-      },
-      subtitles: [{
-				text: "Total: $" + total.toFixed(2),
-				verticalAlign: "center",
-				fontSize: 16,
-				dockInsidePlotArea: true
-			}],
-      data: [
-      {
-        type: "doughnut",
-        showInLegend: "true",
-				legendText: "{label}",
-				toolTipContent: "{label}: <strong>'$'{y}</strong>",
-        indexLabel: "'$'{y}",
-        dataPoints: dataPoints
-      }
-      ]
-    });
-  }
-
   useEffect(() => {
     getOptions();
   }, []);
@@ -216,10 +143,7 @@ export const OptionMarket = () => {
     <>
       <div>
         <div>
-        <CanvasJSChart options = {underlyingPoolsOption} />
-        </div>
-        <div>
-        <CanvasJSChart options = {quotePoolsOption} />
+        <CanvasJSChart options = {assetPoolsOption} />
         </div>
       </div>
     </>

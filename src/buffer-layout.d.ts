@@ -3,7 +3,3 @@ declare module "buffer-layout" {
   export = magic;
 }
 
-declare module "jazzicon" {
-  const magic: any;
-  export = magic;
-}
