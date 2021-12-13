@@ -1,6 +1,6 @@
 import { Provider, Wallet } from '@project-serum/anchor';
 import { useMemo } from 'react';
-import useConnection from './useConnection';
+import useConnection from '../hooks/useConnection';
 import { useConnectedWallet } from '@saberhq/use-solana';
 import { Keypair } from '@solana/web3.js';
 

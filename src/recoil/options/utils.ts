@@ -1,7 +1,7 @@
 import { getOptionByKey } from '@mithraic-labs/psy-american';
 import { PublicKey } from '@solana/web3.js';
 import { useCallback } from 'react';
-import { useAmericanPsyOptionsProgram } from '../../utils/useAmericanPsyOptionsProgram';
+import { useAmericanPsyOptionsProgram } from '../../hooks/useAmericanPsyOptionsProgram';
 import { useUpsertOption } from './options';
 
 export const useFetchAndUpsertOption = (): ((optionKey: PublicKey) => void) => {
