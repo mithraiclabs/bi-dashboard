@@ -49,8 +49,6 @@ export const TVL = ({connection, optionMarkets}) => {
         keys.push(market.underlyingAssetMint.toBase58());
     });
 
-    console.log(optionMarkets);
-
     const priceOfMint = await getPriceWithTokenAddress(keys);
 
     const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));

@@ -17,7 +17,7 @@ export type ConnectionContextType = {
 };
 
 const ConnectionContext = createContext<ConnectionContextType>({
-  connection: new Connection(clusterApiUrl('devnet')),
+  connection: new Connection(clusterApiUrl('mainnet-beta')),
   networks,
 });
 
