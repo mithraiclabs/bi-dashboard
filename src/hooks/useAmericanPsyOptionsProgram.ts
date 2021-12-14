@@ -3,7 +3,7 @@ import { Program } from '@project-serum/anchor';
 import { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { activeNetwork } from '../recoil';
-import { useProvider } from '../utils/useProvider';
+import { useProvider } from './useProvider';
 
 /**
  * Get a program instance for the American PsyOptions protocol.

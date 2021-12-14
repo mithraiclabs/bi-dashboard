@@ -1,14 +1,8 @@
-import { PublicKey } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
 import { getAmountWithDecimal } from '../../utils/math';
 import { request, gql } from 'graphql-request'
 import { useDeriveMultipleSerumMarketAddresses } from "../../hooks/useDeriveMultipleSerumMarketAddresses ";
-
-
-interface poolByMint {
-  [id: string]: PublicKey[]
-}
 
 export const TotalVolumes = ({connection, optionMarkets}) => {
   const serumAddresses = useDeriveMultipleSerumMarketAddresses(optionMarkets);
@@ -17,7 +11,7 @@ export const TotalVolumes = ({connection, optionMarkets}) => {
 
   async function get24HRTotalVolume() {
     const poolList = serumAddresses.map(key => '"' + key.toBase58() + '"');
-    
+    console.log(serumAddresses);
     const query = gql`
       {
         tokensStats(addresses: [
@@ -37,6 +31,7 @@ export const TotalVolumes = ({connection, optionMarkets}) => {
        }
        }
     `
+    console.log(query);
     const data = await request('https://api.serum.markets/', query);
     console.log(data);
 
@@ -78,10 +73,8 @@ export const TotalVolumes = ({connection, optionMarkets}) => {
   }, []);
 
   return (
-    <>
       <div>
         <CanvasJSChart options = {totalVolume24HRData} />
       </div>
-    </>
   );
 };

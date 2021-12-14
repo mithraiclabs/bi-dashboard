@@ -15,10 +15,16 @@ export const useDeriveMultipleSerumMarketAddresses = (
   const _quoteMint = useRecoilValue(quoteMint);
 
   useEffect(() => {
+    console.log(options);
+    console.log(_quoteMint);
+    console.log(quoteMint);
+    console.log(activeNetwork);
+
     if (!program || !_quoteMint) {
       return;
     }
     const marketMetaOptions = getSupportedMarketsByNetwork(network.name);
+    
     (async () => {
       const deriveSerumAddressesPromises = options.map(async (option) => {
         // Check if the option exists in the market meta package first. This is for backwards
@@ -36,6 +42,8 @@ export const useDeriveMultipleSerumMarketAddresses = (
           option.key,
           _quoteMint,
         );
+
+        console.log(address);
         return address;
       });
       const derivedAddresses = await Promise.all(deriveSerumAddressesPromises);

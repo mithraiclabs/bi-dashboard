@@ -17,8 +17,7 @@ interface amountByMint {
 export const TVL = ({connection, optionMarkets}) => {
   const [tvlAssetPoolsOption, setTVLAssetPoolsOption] = useState({});
 
-
-  async function getOptions() {
+  async function generateTVLGraph() {
     // Load all the PsyOptions option markets
 
     let assetPoolList: poolByMint = {};
@@ -120,7 +119,7 @@ export const TVL = ({connection, optionMarkets}) => {
   }
 
   useEffect(() => {
-    getOptions();
+    generateTVLGraph();
   }, []);
 
   return (
