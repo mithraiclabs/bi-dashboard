@@ -1,21 +1,14 @@
 import { useEffect, useState } from "react";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
-import { getAmountWithDecimal } from '../../utils/math';
 import { request, gql } from 'graphql-request'
 import { useDeriveMultipleSerumMarketAddresses } from "../../hooks/useDeriveMultipleSerumMarketAddresses ";
-import { TOKENSBASE } from "../../models/token";
 
 export const UniqueDailyTraders = ({optionMarkets}) => {
   const serumAddresses = useDeriveMultipleSerumMarketAddresses(optionMarkets);
   const [uniqueTraders, setUniqueTraders] = useState({});
 
-
   async function getUniqueTraders() {
     const keys = Object.keys(serumAddresses);
-    let _24HRtotal = 0;
-    let _24HRdataPoints: { label: string; y: number; }[] = [];
-    let _7Dtotal = 0;
-    let _7DdataPoints: { label: string; y: number; }[] = [];
     let poolList: string[] = [];
     
     for await (const key of keys) {
