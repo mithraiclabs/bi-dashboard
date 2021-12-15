@@ -11,7 +11,7 @@ export const TotalVolumes = ({connection, optionMarkets}) => {
   const [totalVolume7DData, setTotalVolume7DData] = useState({});
 
 
-  async function getTotalVolume() {
+  const getTotalVolume = async () => {
     const keys = Object.keys(serumAddresses);
     let _24HRtotal = 0;
     let _24HRdataPoints: { label: string; y: number; }[] = [];
@@ -111,9 +111,11 @@ export const TotalVolumes = ({connection, optionMarkets}) => {
   return (
     <div>
       <div>
+        <span></span>
         <CanvasJSChart options = {totalVolume24HRData} />
       </div>
       <div>
+        <span></span>
         <CanvasJSChart options = {totalVolume7DData} />
       </div>
     </div>
