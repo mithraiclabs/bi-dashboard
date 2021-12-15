@@ -8,9 +8,10 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
+    "strictNullChecks": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -19,7 +20,10 @@
     "isolatedModules": true,
     "downlevelIteration": true,
     "noEmit": true,
-    "typeRoots": ["./types"],
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "jsx": "react-jsx"
   },
   "include": [
