@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 import { TVL } from "../TVL";
 import { TotalVolumes } from "../TotalVolumes";
+import { UniqueDailyTraders } from "../UniqueDailyTraders";
 
 export const OptionMarket = () => {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
@@ -28,7 +29,8 @@ export const OptionMarket = () => {
       <div>
         {optionMarkets.length > 0 ? <TVL connection={connection} optionMarkets={optionMarkets} /> : ""}
         {optionMarkets.length > 0 ? <TotalVolumes connection={connection} optionMarkets={optionMarkets} /> : ""}
-        
+        {optionMarkets.length > 0 ? <UniqueDailyTraders optionMarkets={optionMarkets} /> : ""}
+
       </div>
     </>
   );
