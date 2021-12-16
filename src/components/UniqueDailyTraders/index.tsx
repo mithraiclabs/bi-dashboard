@@ -1,77 +1,69 @@
 import { useEffect, useState } from "react";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
 import { request, gql } from 'graphql-request'
-import { useDeriveMultipleSerumMarketAddresses } from "../../hooks/useDeriveMultipleSerumMarketAddresses ";
 
-export const UniqueDailyTraders = ({optionMarkets}) => {
-  const serumAddresses = useDeriveMultipleSerumMarketAddresses(optionMarkets);
+export const UniqueDailyTraders = ({serumAddresses}) => {
   const [uniqueTraders, setUniqueTraders] = useState({});
 
-  async function getUniqueTraders() {
+  useEffect(() => {
     const keys = Object.keys(serumAddresses);
-    let poolList: string[] = [];
+    let addressList: string[] = [];
     
-    for await (const key of keys) {
-      poolList = poolList.concat(serumAddresses[key].map(key => '"' + key.toBase58() + '"'));
-    }
+    (async () => {
+      for await (const key of keys) {
+        addressList = addressList.concat(serumAddresses[key].map(key => '"' + key.toBase58() + '"'));
+      }
 
-    const query = gql`
-    {
-      dailyStats( markets: [
-        ${poolList}
-      ] )
+      const query = gql`
       {
-        au {
-          au
-          interval
+        dailyStats( markets: [
+          ${addressList}
+        ] )
+        {
+          au {
+            au
+            interval
+          }
         }
       }
-    }
-    `
-    console.log(poolList);
-    const data = await request('https://api.serum.markets/', query);
-    console.log(data);
+      `
+      const data = await request('https://api.serum.markets/', query);
 
-    let startDate = new Date();
-    startDate.setDate(startDate.getDate()-30);
-    let _30DayTraders: { label: string; y: number; }[] = [];
-    
-    for (let i = 0; i <= 30; i++) {
-      _30DayTraders.push({label:startDate.toISOString().substring(0, 10) , y: 0});
-      startDate.setDate(startDate.getDate() + 1);
-    }
-    data.dailyStats.au.forEach(val => {
-      const dateString = val.interval.substring(0, 10);
-      _30DayTraders.forEach(traders => {
-        if (traders.label === dateString)
-          traders.y = val.au;
-      })
-    });
+      let startDate = new Date();
+      startDate.setDate(startDate.getDate()-30);
+      let _30DayTraders: { label: string; y: number; }[] = [];
+      
+      for (let i = 0; i <= 30; i++) {
+        _30DayTraders.push({label:startDate.toISOString().substring(0, 10) , y: 0});
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      data.dailyStats.au.forEach(val => {
+        const dateString = val.interval.substring(0, 10);
+        _30DayTraders.forEach(traders => {
+          if (traders.label === dateString)
+            traders.y = val.au;
+        })
+      });
 
-    setUniqueTraders({
-			title: {
-				text: "Unique Daily Traders lasts 30 Days"
-			},
-			data: [
-			{
-				type: "column",
-				dataPoints: _30DayTraders,
-        color: 'rgb(0,185,197)',
-        indexLabel: "{y}",
-			}
-			]
-		});
-  }
-
-  useEffect(() => {
-    getUniqueTraders();
+      setUniqueTraders({
+        title: {
+          text: "Unique Daily Traders lasts 30 Days"
+        },
+        data: [
+        {
+          type: "column",
+          dataPoints: _30DayTraders,
+          color: 'rgb(0,185,197)',
+          indexLabel: "{y}",
+        }
+        ]
+      });
+    })();
   }, [serumAddresses]);
 
   return (
-    <div>
-      <div>
-        <CanvasJSChart options = {uniqueTraders} />
-      </div>
+    <div id='uniqueTraders'>
+      {Object.keys(uniqueTraders).length && <CanvasJSChart options = {uniqueTraders} />}
     </div>
   );
 };

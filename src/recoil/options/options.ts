@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { OptionMarket, OptionMarketWithKey } from '@mithraic-labs/psy-american';
 import { BN, ProgramAccount } from '@project-serum/anchor';
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import _uniqby from 'lodash.uniqby';
 import {
   atom,
@@ -41,7 +41,7 @@ export const underlyingMint = atom<PublicKey | null>({
 
 export const quoteMint = atom<PublicKey | null>({
   key: 'quoteMint',
-  default: new PublicKey('2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk'),
+  default: null,
 });
 
 /**

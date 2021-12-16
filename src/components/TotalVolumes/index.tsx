@@ -2,122 +2,114 @@ import { useEffect, useState } from "react";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
 import { getAmountWithDecimal } from '../../utils/math';
 import { request, gql } from 'graphql-request'
-import { useDeriveMultipleSerumMarketAddresses, publicKeyByMints } from "../../hooks/useDeriveMultipleSerumMarketAddresses ";
 import { TOKENSBASE } from "../../models/token";
 
-export const TotalVolumes = ({connection, optionMarkets}) => {
-  const serumAddresses = useDeriveMultipleSerumMarketAddresses(optionMarkets);
+export const TotalVolumes = ({serumAddresses}) => {
   const [totalVolume24HRData, setTotalVolume24HRData] = useState({});
   const [totalVolume7DData, setTotalVolume7DData] = useState({});
 
-
-  const getTotalVolume = async () => {
+  useEffect(() => {
     const keys = Object.keys(serumAddresses);
-    let _24HRtotal = 0;
-    let _24HRdataPoints: { label: string; y: number; }[] = [];
-    let _7Dtotal = 0;
-    let _7DdataPoints: { label: string; y: number; }[] = [];
+    let total24HR = 0;
+    let dataPoints24HR: { label: string; y: number; }[] = [];
+    let Total7D = 0;
+    let dataPoints7D: { label: string; y: number; }[] = [];
 
-    for await (const key of keys) {
-      const poolList = serumAddresses[key].map(key => '"' + key.toBase58() + '"');
-      const query = gql`
-      {
-        dailyStats( markets: [
-          ${poolList}
-        ] )
-          {
-          stats {
-            au1h
-            vol1hUsd
-            au24h
-            vol24hUsd
-            au7d
-            vol7dUsd
+    (async () => {
+      for await (const key of keys) {
+        const poolList = serumAddresses[key].map(key => '"' + key.toBase58() + '"');
+        const query = gql`
+        {
+          dailyStats( markets: [
+            ${poolList}
+          ] )
+            {
+            stats {
+              au1h
+              vol1hUsd
+              au24h
+              vol24hUsd
+              au7d
+              vol7dUsd
+            }
           }
         }
-      }
-      `
-      console.log(poolList);
-      const data = await request('https://api.serum.markets/', query);
-      console.log(data);
-  
-      const tokenKeys = Object.keys(TOKENSBASE);
-      let symbol = '';
-      let decimals = 0;
-      tokenKeys.forEach(tkey => {
-        if (TOKENSBASE[tkey].mintAddress === key) {
-          symbol = TOKENSBASE[tkey].symbol;
-          decimals = TOKENSBASE[tkey].decimals;
+        `
+        const serumData = await request('https://api.serum.markets/', query);
+    
+        const tokenKeys = Object.keys(TOKENSBASE);
+        let symbol = '';
+        let decimals = 0;
+        tokenKeys.forEach(tkey => {
+          if (TOKENSBASE[tkey].mintAddress === key) {
+            symbol = TOKENSBASE[tkey].symbol;
+            decimals = TOKENSBASE[tkey].decimals;
+          }
+        });
+        let _24HRamount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol24hUsd), decimals);
+        total24HR += _24HRamount;
+        dataPoints24HR.push( {label: symbol, y: Math.round(_24HRamount)});
+
+        let _7Damount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol7dUsd), decimals);
+        Total7D += _7Damount;
+        dataPoints7D.push( {label: symbol, y: Math.round(_7Damount)});
+      };
+
+      setTotalVolume24HRData({
+        title: {
+          text: "24H Total Volume"
+        },
+        subtitles: [{
+          text: "Total: $" + Math.round(total24HR).toLocaleString(),
+          verticalAlign: "center",
+          fontSize: 16,
+          dockInsidePlotArea: true
+        }],
+        data: [
+        {
+          type: "doughnut",
+          showInLegend: "true",
+          toolTipContent: "{label}: <strong>'$'{y}</strong>",
+          legendText: "{label}",
+          indexLabel: "'$'{y}",
+          dataPoints: dataPoints24HR
         }
+        ]
       });
-      let _24HRamount = getAmountWithDecimal(Number.parseInt(data.dailyStats.stats.vol24hUsd), decimals);
-      _24HRtotal += _24HRamount;
-      _24HRdataPoints.push( {label: symbol, y: Math.round(_24HRamount)});
 
-      let _7Damount = getAmountWithDecimal(Number.parseInt(data.dailyStats.stats.vol7dUsd), decimals);
-      _7Dtotal += _7Damount;
-      _7DdataPoints.push( {label: symbol, y: Math.round(_7Damount)});
-    };
-
-    setTotalVolume24HRData({
-      title: {
-        text: "24H Total Volume"
-      },
-      subtitles: [{
-				text: "Total: $" + Math.round(_24HRtotal).toLocaleString(),
-				verticalAlign: "center",
-				fontSize: 16,
-				dockInsidePlotArea: true
-			}],
-      data: [
-      {
-        type: "doughnut",
-        showInLegend: "true",
-				toolTipContent: "{label}: <strong>'$'{y}</strong>",
-				legendText: "{label}",
-        indexLabel: "'$'{y}",
-        dataPoints: _24HRdataPoints
-      }
-      ]
-    });
-
-    setTotalVolume7DData({
-      title: {
-        text: "7D Total Volume"
-      },
-      subtitles: [{
-				text: "Total: $" + Math.round(_7Dtotal).toLocaleString(),
-				verticalAlign: "center",
-				fontSize: 16,
-				dockInsidePlotArea: true
-			}],
-      data: [
-      {
-        type: "doughnut",
-        showInLegend: "true",
-				toolTipContent: "{label}: <strong>'$'{y}</strong>",
-				legendText: "{label}",
-        indexLabel: "'$'{y}",
-        dataPoints: _7DdataPoints
-      }
-      ]
-    });
-  }
-
-  useEffect(() => {
-    getTotalVolume();
+      setTotalVolume7DData({
+        title: {
+          text: "7D Total Volume"
+        },
+        subtitles: [{
+          text: "Total: $" + Math.round(Total7D).toLocaleString(),
+          verticalAlign: "center",
+          fontSize: 16,
+          dockInsidePlotArea: true
+        }],
+        data: [
+        {
+          type: "doughnut",
+          showInLegend: "true",
+          toolTipContent: "{label}: <strong>'$'{y}</strong>",
+          legendText: "{label}",
+          indexLabel: "'$'{y}",
+          dataPoints: dataPoints7D
+        }
+        ]
+      });
+    })();
   }, [serumAddresses]);
 
   return (
     <div>
       <div>
-        <span></span>
-        <CanvasJSChart options = {totalVolume24HRData} />
+        {Object.keys(totalVolume24HRData).length && <CanvasJSChart options={totalVolume24HRData} />}
       </div>
       <div>
-        <span></span>
-        <CanvasJSChart options = {totalVolume7DData} />
+        {Object.keys(totalVolume7DData).length && <CanvasJSChart options={totalVolume7DData} />}
       </div>
     </div>
   );
 };
+

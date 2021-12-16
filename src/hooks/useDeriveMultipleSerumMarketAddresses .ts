@@ -5,14 +5,8 @@ import { useEffect, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useAmericanPsyOptionsProgram } from './useAmericanPsyOptionsProgram';
 import { getSupportedMarketsByNetwork } from '../utils/networkInfo';
+import { publicKeyByMints, marketByMint } from '../models/groupInterfaces';
 
-export interface marketByMint {
-  [id: string]: OptionMarketWithKey[]
-}
-
-export interface publicKeyByMints {
-  [id: string]: PublicKey[]
-}
 
 export const useDeriveMultipleSerumMarketAddresses = (
   options: OptionMarketWithKey[]
@@ -20,7 +14,6 @@ export const useDeriveMultipleSerumMarketAddresses = (
   const network: any = useRecoilValue(activeNetwork);
   const [serumMarketKeys, setSerumMarketKeys] = useState<publicKeyByMints>({});
   const program = useAmericanPsyOptionsProgram();
-  // const _quoteMint = useRecoilValue(quoteMint);
 
   useEffect(() => {
     if (!program) {

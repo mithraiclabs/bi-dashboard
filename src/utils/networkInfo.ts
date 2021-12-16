@@ -180,15 +180,15 @@ const getAssetsByNetwork = (name: ClusterName): Token[] => {
       return MarketMeta.devnet.tokens;
     case ClusterName.testnet:
       return MarketMeta.testnet.tokens;
-    case ClusterName.localhost:
-      try {
-        /* eslint-disable */
-        const localnetData = require('../../tmp/localnetData.json');
-        return [TOKENS.mainnet[0], ...localnetData];
-      } catch (err) {
-        console.error('localnet data not found at ../../tmp/localnetData.json');
-        return [];
-      }
+    // case ClusterName.localhost:
+    //   try {
+    //     /* eslint-disable */
+    //     const localnetData = require('../../tmp/localnetData.json');
+    //     return [TOKENS.mainnet[0], ...localnetData];
+    //   } catch (err) {
+    //     console.error('localnet data not found at ../../tmp/localnetData.json');
+    //     return [];
+    //   }
     default:
       return [];
   }

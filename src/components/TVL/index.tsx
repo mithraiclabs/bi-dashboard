@@ -1,62 +1,14 @@
-import { PublicKey } from "@solana/web3.js";
+import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 import { getMultipleAccountInfo, getMultipleMintInfo } from "../../utils/accounts";
 import { getPriceWithTokenAddress } from "../../utils/price";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
 import { getAmountWithDecimal } from '../../utils/math';
 import { TOKENSBASE } from "../../models/token";
+import { amountByMint, poolByMint } from "../../models/groupInterfaces";
 
-interface poolByMint {
-  [id: string]: PublicKey[]
-}
-
-interface amountByMint {
-  [id: string]: number
-}
-
-export const TVL = ({connection, optionMarkets}) => {
+export const TVL = ({optionMarkets}) => {
   const [tvlAssetPoolsOption, setTVLAssetPoolsOption] = useState({});
-
-  async function generateTVLGraph() {
-    // Load all the PsyOptions option markets
-
-    let assetPoolList: poolByMint = {};
-
-    const keys: string[] = [];
-    const poolList: PublicKey[] = [];
-
-    optionMarkets.forEach(market => {
-      if (!assetPoolList[market.underlyingAssetMint.toBase58()]) {
-        assetPoolList[market.underlyingAssetMint.toBase58()] = [];
-      }
-      if (!assetPoolList[market.quoteAssetMint.toBase58()]) {
-        assetPoolList[market.quoteAssetMint.toBase58()] = [];
-      }
-
-      if (assetPoolList[market.underlyingAssetMint.toBase58()]) {
-        assetPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
-        poolList.push(market.underlyingAssetPool);
-      }
-
-      if (assetPoolList[market.quoteAssetMint.toBase58()]) {
-        assetPoolList[market.quoteAssetMint.toBase58()].push(market.quoteAssetPool);
-        poolList.push(market.quoteAssetPool);
-      }
-
-      if (keys.indexOf(market.underlyingAssetMint.toBase58()) < 0)
-        keys.push(market.underlyingAssetMint.toBase58());
-      if (keys.indexOf(market.quoteAssetMint.toBase58()) < 0)
-        keys.push(market.underlyingAssetMint.toBase58());
-    });
-
-    const priceOfMint = await getPriceWithTokenAddress(keys);
-
-    const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
-
-    const accountList = await getMultipleAccountInfo(connection, poolList);
-
-    drawUnderlyingPool(accountList, assetPoolList, priceOfMint, mints);
-  }
 
   async function drawUnderlyingPool(accountList: any[], assetPoolList: poolByMint, priceOfMint: any[], mintList: any[]) {
     const keys = Object.keys(assetPoolList);
@@ -117,15 +69,52 @@ export const TVL = ({connection, optionMarkets}) => {
   }
 
   useEffect(() => {
-    generateTVLGraph();
-  }, []);
+    const connection = new Connection(clusterApiUrl('mainnet-beta'));
+
+    let assetPoolList: poolByMint = {};
+
+    const keys: string[] = [];
+    const poolList: PublicKey[] = [];
+
+    optionMarkets.forEach(market => {
+      if (!assetPoolList[market.underlyingAssetMint.toBase58()]) {
+        assetPoolList[market.underlyingAssetMint.toBase58()] = [];
+      }
+      if (!assetPoolList[market.quoteAssetMint.toBase58()]) {
+        assetPoolList[market.quoteAssetMint.toBase58()] = [];
+      }
+
+      if (assetPoolList[market.underlyingAssetMint.toBase58()]) {
+        assetPoolList[market.underlyingAssetMint.toBase58()].push(market.underlyingAssetPool);
+        poolList.push(market.underlyingAssetPool);
+      }
+
+      if (assetPoolList[market.quoteAssetMint.toBase58()]) {
+        assetPoolList[market.quoteAssetMint.toBase58()].push(market.quoteAssetPool);
+        poolList.push(market.quoteAssetPool);
+      }
+
+      if (keys.indexOf(market.underlyingAssetMint.toBase58()) < 0)
+        keys.push(market.underlyingAssetMint.toBase58());
+      if (keys.indexOf(market.quoteAssetMint.toBase58()) < 0)
+        keys.push(market.underlyingAssetMint.toBase58());
+    });
+
+    (async () => {
+      const priceOfMint = await getPriceWithTokenAddress(keys);
+
+      const mints = await getMultipleMintInfo(connection, keys.map(key => new PublicKey(key)));
+
+      const accountList = await getMultipleAccountInfo(connection, poolList);
+
+      drawUnderlyingPool(accountList, assetPoolList, priceOfMint, mints);
+    })();
+  }, [optionMarkets]);
 
   return (
     <>
       <div>
-        <div>
-          <CanvasJSChart options = {tvlAssetPoolsOption} />
-        </div>
+        {Object.keys(tvlAssetPoolsOption).length && <CanvasJSChart options = {tvlAssetPoolsOption} />}
       </div>
     </>
   );
