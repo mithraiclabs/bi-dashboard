@@ -44,6 +44,7 @@ export const TVL = ({optionMarkets}) => {
       dataPoints.push( {label: symbol, y: Math.round(assetAmounts[key])});
       total += assetAmounts[key];
     })
+    dataPoints.sort((a, b) => a.label.localeCompare(b.label));
 
     setTVLAssetPoolsOption({
       title: {

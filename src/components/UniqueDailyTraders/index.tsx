@@ -2,17 +2,24 @@ import { useEffect, useState } from "react";
 import { CanvasJSChart } from '../../utils/canvasjs-react-charts';
 import { request, gql } from 'graphql-request'
 
-export const UniqueDailyTraders = ({serumAddresses}) => {
+export const UniqueDailyTraders = ({serumAddressesPuts, serumAddressesCalls}) => {
   const [uniqueTraders, setUniqueTraders] = useState({});
 
   useEffect(() => {
-    const keys = Object.keys(serumAddresses);
+    const keys = [...new Set(Object.keys(serumAddressesPuts).concat(Object.keys(serumAddressesCalls)))];
     let addressList: string[] = [];
-    
+
     (async () => {
-      for await (const key of keys) {
-        addressList = addressList.concat(serumAddresses[key].map(key => '"' + key.toBase58() + '"'));
+      for (const key of keys) {
+        if (serumAddressesPuts[key])
+          addressList = addressList.concat(serumAddressesPuts[key].map(key => '"' + key.toBase58() + '"'));
       }
+      for (const key of keys) {
+        if (serumAddressesCalls[key])
+          addressList = addressList.concat(serumAddressesCalls[key].map(key => '"' + key.toBase58() + '"'));
+      }
+
+      addressList = [...new Set(addressList)];
 
       const query = gql`
       {
@@ -59,7 +66,7 @@ export const UniqueDailyTraders = ({serumAddresses}) => {
         ]
       });
     })();
-  }, [serumAddresses]);
+  }, [serumAddressesPuts, serumAddressesCalls]);
 
   return (
     <div id='uniqueTraders'>
