@@ -3,15 +3,15 @@ import { TotalVolumes } from "../TotalVolumes";
 import { UniqueDailyTraders } from "../UniqueDailyTraders";
 
 export const SerumAddressList = ({optionMarkets}) => {
-  const serumAddresses = useDeriveMultipleSerumMarketAddresses(optionMarkets);
+  const [serumAddressesPuts, serumAddressesCalls] = useDeriveMultipleSerumMarketAddresses(optionMarkets);
 
   return (
     <div>
       <div>
-        <TotalVolumes serumAddresses = {serumAddresses} />
+        <TotalVolumes serumAddressesPuts={serumAddressesPuts} serumAddressesCalls={serumAddressesCalls} />
       </div>
       <div>
-        <UniqueDailyTraders serumAddresses = {serumAddresses} />
+        <UniqueDailyTraders serumAddressesPuts={serumAddressesPuts} serumAddressesCalls={serumAddressesCalls}  />
       </div>
     </div>
   );

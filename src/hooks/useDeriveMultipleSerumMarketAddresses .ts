@@ -10,9 +10,10 @@ import { publicKeyByMints, marketByMint } from '../models/groupInterfaces';
 
 export const useDeriveMultipleSerumMarketAddresses = (
   options: OptionMarketWithKey[]
-): publicKeyByMints => {
+): [publicKeyByMints, publicKeyByMints] => {
   const network: any = useRecoilValue(activeNetwork);
-  const [serumMarketKeys, setSerumMarketKeys] = useState<publicKeyByMints>({});
+  const [serumMarketKeysPuts, setSerumMarketKeysPuts] = useState<publicKeyByMints>({});
+  const [serumMarketKeysCalls, setSerumMarketKeysCalls] = useState<publicKeyByMints>({});
   const program = useAmericanPsyOptionsProgram();
 
   useEffect(() => {
@@ -20,7 +21,8 @@ export const useDeriveMultipleSerumMarketAddresses = (
       return;
     }
     const marketMetaOptions = getSupportedMarketsByNetwork(network.name);
-    let serumMarketKeys : publicKeyByMints = {};
+    let serumMarketKeysPuts : publicKeyByMints = {};
+    let serumMarketKeysCalls : publicKeyByMints = {};
 
     (async () => {
       let marketListByQuote: marketByMint = {};
@@ -56,7 +58,7 @@ export const useDeriveMultipleSerumMarketAddresses = (
       });
 
       for await (const key of keys) {
-        serumMarketKeys[key] = await Promise.all(marketListByQuote[key].map(async (option) => {
+        serumMarketKeysCalls[key] = await Promise.all(marketListByUnderlying[key].map(async (option) => {
           // Check if the option exists in the market meta package first. This is for backwards
           // compatibility and could eventually be removed when the market meta package is no
           // longer needed.
@@ -75,7 +77,7 @@ export const useDeriveMultipleSerumMarketAddresses = (
           return address;
         }));
 
-        serumMarketKeys[key] = serumMarketKeys[key].concat(await Promise.all(marketListByQuote[key].map(async (option) => {
+        serumMarketKeysPuts[key] = await Promise.all(marketListByQuote[key].map(async (option) => {
           // Check if the option exists in the market meta package first. This is for backwards
           // compatibility and could eventually be removed when the market meta package is no
           // longer needed.
@@ -92,12 +94,13 @@ export const useDeriveMultipleSerumMarketAddresses = (
             new PublicKey(key),
           );
           return address;
-        })));
+        }));
       };
 
-      setSerumMarketKeys(serumMarketKeys);
+      setSerumMarketKeysPuts(serumMarketKeysPuts);
+      setSerumMarketKeysCalls(serumMarketKeysCalls);
     })();
   }, [options, program, network]);
 
-  return serumMarketKeys;
+  return [serumMarketKeysPuts, serumMarketKeysCalls];
 };

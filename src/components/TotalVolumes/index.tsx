@@ -4,12 +4,12 @@ import { getAmountWithDecimal } from '../../utils/math';
 import { request, gql } from 'graphql-request'
 import { TOKENSBASE } from "../../models/token";
 
-export const TotalVolumes = ({serumAddresses}) => {
+export const TotalVolumes = ({serumAddressesPuts, serumAddressesCalls}) => {
   const [totalVolume24HRData, setTotalVolume24HRData] = useState({});
   const [totalVolume7DData, setTotalVolume7DData] = useState({});
 
   useEffect(() => {
-    const keys = Object.keys(serumAddresses);
+    const keys = Object.keys(serumAddressesPuts);
     let total24HR = 0;
     let dataPoints24HR: { label: string; y: number; }[] = [];
     let Total7D = 0;
@@ -17,7 +17,9 @@ export const TotalVolumes = ({serumAddresses}) => {
 
     (async () => {
       for await (const key of keys) {
-        const poolList = serumAddresses[key].map(key => '"' + key.toBase58() + '"');
+        if (!serumAddressesPuts[key])
+          continue;
+        const poolList = serumAddressesPuts[key].map(key => '"' + key.toBase58() + '"');
         const query = gql`
         {
           dailyStats( markets: [
@@ -48,12 +50,58 @@ export const TotalVolumes = ({serumAddresses}) => {
         });
         let _24HRamount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol24hUsd), decimals);
         total24HR += _24HRamount;
-        dataPoints24HR.push( {label: symbol, y: Math.round(_24HRamount)});
+        dataPoints24HR.push( {label: symbol + '-Puts', y: Math.round(_24HRamount)});
 
         let _7Damount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol7dUsd), decimals);
         Total7D += _7Damount;
-        dataPoints7D.push( {label: symbol, y: Math.round(_7Damount)});
+        dataPoints7D.push( {label: symbol + '-Puts', y: Math.round(_7Damount)});
       };
+
+
+      for await (const key of keys) {
+        if (!serumAddressesCalls[key])
+          continue;
+
+        const poolList = serumAddressesCalls[key].map(key => '"' + key.toBase58() + '"');
+        const query = gql`
+        {
+          dailyStats( markets: [
+            ${poolList}
+          ] )
+            {
+            stats {
+              au1h
+              vol1hUsd
+              au24h
+              vol24hUsd
+              au7d
+              vol7dUsd
+            }
+          }
+        }
+        `
+        const serumData = await request('https://api.serum.markets/', query);
+    
+        const tokenKeys = Object.keys(TOKENSBASE);
+        let symbol = '';
+        let decimals = 0;
+        tokenKeys.forEach(tkey => {
+          if (TOKENSBASE[tkey].mintAddress === key) {
+            symbol = TOKENSBASE[tkey].symbol;
+            decimals = TOKENSBASE[tkey].decimals;
+          }
+        });
+        let _24HRamount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol24hUsd), decimals);
+        total24HR += _24HRamount;
+        dataPoints24HR.push( {label: symbol + '-Calls', y: Math.round(_24HRamount)});
+
+        let _7Damount = getAmountWithDecimal(Number.parseInt(serumData.dailyStats.stats.vol7dUsd), decimals);
+        Total7D += _7Damount;
+        dataPoints7D.push( {label: symbol + '-Calls', y: Math.round(_7Damount)});
+      };
+
+      dataPoints24HR.sort((a, b) => a.label.localeCompare(b.label));
+      dataPoints7D.sort((a, b) => a.label.localeCompare(b.label));
 
       setTotalVolume24HRData({
         title: {
@@ -99,7 +147,7 @@ export const TotalVolumes = ({serumAddresses}) => {
         ]
       });
     })();
-  }, [serumAddresses]);
+  }, [serumAddressesPuts, serumAddressesCalls]);
 
   return (
     <div>
